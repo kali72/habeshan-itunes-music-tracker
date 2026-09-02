@@ -1,1 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habesha iTunes Music Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
 
+  <header class="header">
+    <div class="header-container">
+      <div class="logo-area">
+        <h1>Habesha Music Tracker</h1>
+        <p class="subtitle">Daily iTunes & Apple Music Chart Leaderboards</p>
+      </div>
+      <button id="theme-toggle" class="btn-theme" aria-label="Toggle theme">☀️ Light Mode</button>
+    </div>
+  </header>
+
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <a href="#top-15-artists" class="nav-link">Top 15 Artists</a>
+      <a href="#all-time-tracks" class="nav-link">All-Time</a>
+      <a href="#weekly-top-10" class="nav-link">Weekly Top 10</a>
+      <a href="#monthly-top-100" class="nav-link">Monthly</a>
+      <a href="#three-month-top-100" class="nav-link">3-Month</a>
+      <a href="#yearly-top-100" class="nav-link">Yearly</a>
+    </div>
+  </nav>
+
+  <main class="main-layout">
+    <!-- Top Row: 2 Columns -->
+    <div class="grid-two-col">
+      <div id="section-top-15-artists"></div>
+      <div id="section-weekly-top-10"></div>
+    </div>
+
+    <!-- Middle Row: 3 Columns -->
+    <div class="grid-three-col">
+      <div id="section-monthly-top-100"></div>
+      <div id="section-three-month-top-100"></div>
+      <div id="section-yearly-top-100"></div>
+    </div>
+
+    <!-- Bottom Row: Full Width -->
+    <div class="grid-full-width">
+      <div id="section-all-time-tracks"></div>
+    </div>
+  </main>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+
+  <footer class="footer">
+    <p>Data powered by iTunes Search API & Google Sheets. Updated daily via GitHub Actions.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
