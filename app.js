@@ -90,6 +90,19 @@ async function loadAllLeaderboards() {
   }
 }
 
+// Builds a URL-safe slug from a track title for the Apple Music link.
+// Apple ignores this segment for routing (only the trailing numeric ID
+// matters), but the link 404s/misbehaves without a "/song/{slug}/{id}"
+// shape -- "/album/{id}" (the old code) is the wrong path entirely.
+function slugify(str) {
+  return String(str)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "track";
+}
+
 function generateTableHtml(rows, tabName) {
   const dataRows = rows.slice(1);
   const isArtistTable = tabName === "Top 15 Artists";
@@ -114,8 +127,12 @@ function generateTableHtml(rows, tabName) {
     const col4 = row[3] || "";
     const trackId = row[4] || "";
 
-    const itunesUrl = trackId && !isArtistTable 
-      ? `https://music.apple.com/us/album/${escapeHtml(trackId)}` 
+    // Apple Music web links are shaped /{storefront}/song/{slug}/{trackId};
+    // the slug is cosmetic (Apple derives it from the track title) but the
+    // path segment ("song", not "album") and the extra slug are required
+    // for the link to resolve correctly.
+    const itunesUrl = trackId && !isArtistTable
+      ? `https://music.apple.com/us/song/${slugify(col4)}/${escapeHtml(trackId)}`
       : "#";
 
     const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
@@ -161,7 +178,6 @@ function generateTableHtml(rows, tabName) {
   tableHtml += `</tbody></table></div>`;
   return tableHtml;
 }
-
 function initBackToTop() {
   const backToTopBtn = document.getElementById("back-to-top");
   if (!backToTopBtn) return;
