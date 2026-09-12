@@ -21,6 +21,7 @@ hidden:
    same fallback path the front end already uses for missing images.
 """
 
+import base64
 import json
 import os
 import time
@@ -93,7 +94,24 @@ def get_gspread_client():
     creds_json = os.environ.get("GCP_SA_KEY")
     if not creds_json:
         raise ValueError("Missing GCP_SA_KEY environment variable.")
-    info = json.loads(creds_json)
+
+    creds_json = creds_json.strip()
+    try:
+        info = json.loads(creds_json)
+    except json.JSONDecodeError:
+        # Common footgun: the key was base64-encoded before being stored as
+        # a GitHub secret (to dodge newline-handling issues). Try that
+        # before giving up, so either storage style works.
+        try:
+            info = json.loads(base64.b64decode(creds_json).decode("utf-8"))
+        except Exception:
+            raise ValueError(
+                "GCP_SA_KEY isn't valid JSON, and isn't valid base64-encoded "
+                "JSON either. Make sure the secret's value is the raw "
+                "contents of your service account key file -- starting "
+                "with '{' and ending with '}' -- with nothing else added."
+            )
+
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
