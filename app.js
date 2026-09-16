@@ -1,5 +1,5 @@
-const SPREADSHEET_ID = "PASTE_YOUR_SPREADSHEET_ID_HERE";
-const API_KEY = "PASTE_YOUR_BROWSER_API_KEY_HERE";
+const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=1349367991#gid=1349367991";
+const API_KEY = "AIzaSyBQMf2Ozc7MU0ZlYnLm486k2yO2ku4AiuE";
 
 const CHARTS = [
   { containerId: "section-top-15-artists", anchorId: "top-15-artists", title: "Top 15 Artists", tabName: "Top 15 Artists" },
