@@ -1,17 +1,18 @@
 import base64
 import json
 import os
+import re
 import time
 from datetime import datetime, timedelta
-
+ 
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
-
+ 
 # ---------------------------------------------------------------------------
 # Discovery & Filtering Configuration
 # ---------------------------------------------------------------------------
-
+ 
 DISCOVERY_QUERIES = [
     "ethiopian oldies",
     "ethiopian classics",
@@ -40,38 +41,38 @@ DISCOVERY_QUERIES = [
     "teddy afro",
     "jano band",
 ]
-
+ 
 # iTunes storefronts to search. Apple does not run separate Ethiopia/Eritrea
 # App Store storefronts, so this searches storefronts with sizable Habesha
 # diaspora populations plus the US catalog (which carries most
 # internationally-distributed Ethiopian/Eritrean releases). Adjust this list
 # if you find better coverage elsewhere -- it's a two-letter ISO code list.
 ITUNES_STOREFRONTS = ["us", "se", "no", "il", "gb"]
-
+ 
 HABESHA_KEYWORDS = [
     "ethio", "ethiopian", "eritrean", "habesha", "amharic",
     "tigrigna", "oromo", "gurage", "ethio-jazz", "ethiopiques",
 ]
-
+ 
 SEED_ARTISTS = [
     "Tilahun Gessesse", "Mahmoud Ahmed", "Alemayehu Eshete", "Mulatu Astatke",
     "Aster Aweke", "Neway Debebe", "Gigi", "Teddy Afro", "Rophnan",
     "Kassmasse", "Veronica Adane", "Jano Band", "Betty G", "Sami Dan",
 ]
-
+ 
 ARCHIVE_HEADERS = ["Date", "Track ID", "Artist", "Track Name", "Popularity"]
-
+ 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
-
+ 
 # Be polite to the undocumented, unauthenticated iTunes rate limit.
 REQUEST_DELAY_SECONDS = 0.6
-
-
+ 
+ 
 def get_gspread_client():
     creds_json = os.environ.get("GCP_SA_KEY")
     if not creds_json:
         raise ValueError("Missing GCP_SA_KEY environment variable.")
-
+ 
     creds_json = creds_json.strip()
     try:
         info = json.loads(creds_json)
@@ -88,18 +89,28 @@ def get_gspread_client():
                 "contents of your service account key file -- starting "
                 "with '{' and ending with '}' -- with nothing else added."
             )
-
+ 
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
     return gspread.authorize(Credentials.from_service_account_info(info, scopes=scopes))
-
-
+ 
+ 
+def extract_spreadsheet_id(raw):
+    """Accepts either a bare spreadsheet ID or a full Google Sheets URL
+    (people often paste the whole address-bar URL into the secret by
+    mistake) and returns just the ID, with whitespace stripped either way.
+    """
+    raw = (raw or "").strip()
+    match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", raw)
+    return match.group(1) if match else raw
+ 
+ 
 # ---------------------------------------------------------------------------
 # iTunes Search API helpers
 # ---------------------------------------------------------------------------
-
+ 
 def itunes_request(params, retries=3):
     """GET against the iTunes Search API with basic retry/backoff."""
     for attempt in range(retries):
@@ -115,8 +126,8 @@ def itunes_request(params, retries=3):
             print(f"iTunes request error: {e}")
             time.sleep(1.5 * (attempt + 1))
     return None
-
-
+ 
+ 
 def search_tracks(term, storefront, limit=25):
     params = {
         "term": term,
@@ -130,8 +141,8 @@ def search_tracks(term, storefront, limit=25):
     if not data:
         return []
     return data.get("results", [])
-
-
+ 
+ 
 def upsize_artwork(url, size=600):
     """iTunes artwork URLs default to 100x100; swap in a larger size."""
     if not url:
@@ -140,18 +151,18 @@ def upsize_artwork(url, size=600):
         if token in url:
             return url.replace(token, f"{size}x{size}bb")
     return url
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Strict Habesha Filtering
 # ---------------------------------------------------------------------------
-
+ 
 def is_habesha_result(item, verified_names):
     artist_name = (item.get("artistName") or "").lower()
     track_name = (item.get("trackName") or "").lower()
     collection = (item.get("collectionName") or "").lower()
     genre = (item.get("primaryGenreName") or "").lower()
-
+ 
     if artist_name in verified_names:
         return True
     if any(kw in artist_name for kw in HABESHA_KEYWORDS):
@@ -161,16 +172,17 @@ def is_habesha_result(item, verified_names):
     if any(kw in track_name or kw in collection for kw in HABESHA_KEYWORDS):
         return True
     return False
-
-
+ 
+ 
 def normalize_track(item):
-    """Reshape an iTunes search result into a generic track-dict shape:
+    """Reshape an iTunes search result into the same generic track-dict
+    shape the rest of the pipeline (and the Spotify version) expects:
     id / name / artists / album.images / album.release_date / popularity.
     """
     track_id = str(item.get("trackId", ""))
     artist_id = str(item.get("artistId", ""))
     artwork = upsize_artwork(item.get("artworkUrl100", ""))
-
+ 
     return {
         "id": track_id,
         "name": item.get("trackName", ""),
@@ -182,21 +194,23 @@ def normalize_track(item):
         "popularity": 0,  # filled in by score_tracks()
         "_hit_count": 1,
     }
-
-
+ 
+ 
 def score_tracks(tracks_by_id):
     """iTunes exposes no popularity/play-count signal, so this builds a
     0-100 proxy score from two observable things: how many discovery
-    queries/storefronts turned the track up, and how recent the release is.
-    Heuristic, not a real popularity metric.
+    queries/storefronts turned the track up (a rough proxy for how
+    prominent/well-tagged it is), and how recent the release is (a small
+    boost so new releases aren't buried under old catalog tracks with many
+    hits). Heuristic, not a real popularity metric.
     """
     if not tracks_by_id:
         return
     max_hits = max(t["_hit_count"] for t in tracks_by_id.values()) or 1
-
+ 
     for t in tracks_by_id.values():
         hit_score = (t["_hit_count"] / max_hits) * 85
-
+ 
         rel = t["album"].get("release_date") or ""
         recency_score = 0
         try:
@@ -205,19 +219,19 @@ def score_tracks(tracks_by_id):
             recency_score = max(0, 15 - (days_old / 365.0) * 3)
         except ValueError:
             pass
-
+ 
         t["popularity"] = round(min(100, hit_score + recency_score))
         del t["_hit_count"]
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # iTunes Discovery
 # ---------------------------------------------------------------------------
-
+ 
 def fetch_itunes_tracks():
     verified_names = {s.lower() for s in SEED_ARTISTS}
     tracks_by_id = {}
-
+ 
     print("Discovering Habesha tracks via iTunes Search API...")
     for term in DISCOVERY_QUERIES:
         for storefront in ITUNES_STOREFRONTS:
@@ -227,13 +241,15 @@ def fetch_itunes_tracks():
                     continue
                 if not is_habesha_result(item, verified_names):
                     continue
-
+ 
                 tid = str(item["trackId"])
                 if tid in tracks_by_id:
                     tracks_by_id[tid]["_hit_count"] += 1
                 else:
                     tracks_by_id[tid] = normalize_track(item)
-
+ 
+    # Also pull each seed artist's own catalog directly, so well-known
+    # artists aren't missed if a discovery query happens to miss them.
     print("Pulling seed artist catalogs...")
     for name in SEED_ARTISTS:
         results = search_tracks(name, "us", limit=50)
@@ -247,16 +263,16 @@ def fetch_itunes_tracks():
                 tracks_by_id[tid]["_hit_count"] += 1
             else:
                 tracks_by_id[tid] = normalize_track(item)
-
+ 
     score_tracks(tracks_by_id)
     print(f"Filtered to {len(tracks_by_id)} verified Habesha tracks.")
     return list(tracks_by_id.values())
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
-# Sheet-writing helpers
+# Sheet-writing helpers (generic -- same shape as the Spotify version)
 # ---------------------------------------------------------------------------
-
+ 
 def ensure_archive_tab(sheet):
     try:
         ws = sheet.worksheet("Archive")
@@ -264,12 +280,12 @@ def ensure_archive_tab(sheet):
         ws = sheet.add_worksheet(title="Archive", rows="2000", cols="10")
         ws.append_row(ARCHIVE_HEADERS)
     return ws
-
-
+ 
+ 
 def append_daily_snapshot(archive_ws, tracks):
     today_str = datetime.now().strftime("%Y-%m-%d")
     rows_to_append = []
-
+ 
     for t in tracks:
         artist_names = ", ".join([a["name"] for a in t.get("artists", [])])
         rows_to_append.append([
@@ -279,16 +295,16 @@ def append_daily_snapshot(archive_ws, tracks):
             t.get("name", ""),
             t.get("popularity", 0),
         ])
-
+ 
     if rows_to_append:
         archive_ws.append_rows(rows_to_append, value_input_option="USER_ENTERED")
-
-
+ 
+ 
 def get_track_image_url(track):
     images = track.get("album", {}).get("images", [])
     return images[0].get("url", "") if images else ""
-
-
+ 
+ 
 def parse_release_date(date_str):
     if not date_str:
         return datetime(2000, 1, 1)
@@ -300,16 +316,19 @@ def parse_release_date(date_str):
         return datetime.strptime(date_str, "%Y-%m-%d")
     except Exception:
         return datetime(2000, 1, 1)
-
-
+ 
+ 
 def prepare_artist_leaderboard_rows(tracks, limit=15):
+    """Apple's public API has no artist-photo or follower-count endpoint,
+    so each artist's cover falls back to their highest-scored track's
+    artwork, and the bio falls back to a tracked-count summary."""
     artist_counts = {}
     artist_track_images = {}
-
+ 
     for track in sorted(tracks, key=lambda x: x.get("popularity", 0), reverse=True):
         pop = track.get("popularity", 0)
         img_url = get_track_image_url(track)
-
+ 
         for artist in track.get("artists", []):
             aid = artist.get("id")
             name = artist.get("name")
@@ -317,30 +336,30 @@ def prepare_artist_leaderboard_rows(tracks, limit=15):
                 continue
             if aid not in artist_counts:
                 artist_counts[aid] = {"name": name, "total_pop": 0, "count": 0}
-                artist_track_images[aid] = img_url
+                artist_track_images[aid] = img_url  # highest-scored track seen first
             artist_counts[aid]["total_pop"] += pop
             artist_counts[aid]["count"] += 1
-
+ 
     sorted_artists = sorted(
         artist_counts.items(),
         key=lambda x: (x[1]["total_pop"], x[1]["count"]),
         reverse=True
     )[:limit]
-
+ 
     rows = [["Rank", "Cover", "Artist", "Bio"]]
-
+ 
     for rank, (aid, data) in enumerate(sorted_artists, start=1):
         bio = f"Habesha Icon \u2022 {data['count']} tracks tracked"
         rows.append([rank, artist_track_images.get(aid, ""), data["name"], bio])
-
+ 
     return rows
-
-
+ 
+ 
 def prepare_all_time_track_rows(tracks, limit=100):
     sorted_tracks = sorted(tracks, key=lambda x: x.get("popularity", 0), reverse=True)
     today_str = datetime.now().strftime("%Y-%m-%d")
     rows = [["Rank", "Cover", "Artist", "Track Name", "Track ID", "Popularity", "Score Growth", "Date"]]
-
+ 
     for rank, track in enumerate(sorted_tracks[:limit], start=1):
         artist_names = ", ".join([a["name"] for a in track.get("artists", [])])
         rows.append([
@@ -354,41 +373,41 @@ def prepare_all_time_track_rows(tracks, limit=100):
             today_str,
         ])
     return rows
-
-
+ 
+ 
 def calculate_timeframe_growth(archive_ws, current_tracks, days_back):
     all_records = archive_ws.get_all_records()
     today = datetime.now().date()
     target_date = today - timedelta(days=days_back)
-
+ 
     past_scores = {}
     best_deltas = {}
-
+ 
     for row in all_records:
         try:
             row_date = datetime.strptime(str(row.get("Date", "")), "%Y-%m-%d").date()
             track_id = str(row.get("Track ID", ""))
             pop = int(row.get("Popularity", 0))
-
+ 
             days_diff = abs((row_date - target_date).days)
             max_allowed_diff = max(2, min(14, days_back // 2))
-
+ 
             if days_diff <= max_allowed_diff:
                 if track_id not in past_scores or days_diff < best_deltas[track_id]:
                     past_scores[track_id] = pop
                     best_deltas[track_id] = days_diff
         except (ValueError, TypeError, KeyError):
             continue
-
+ 
     has_archive_data = len(past_scores) > 0
     ranked_tracks = []
     now = datetime.now()
-
+ 
     for t in current_tracks:
         tid = t.get("id")
         curr_pop = t.get("popularity", 0)
         t_copy = dict(t)
-
+ 
         if has_archive_data and tid in past_scores:
             growth = curr_pop - past_scores[tid]
             t_copy["score"] = (float(growth), float(curr_pop))
@@ -396,7 +415,7 @@ def calculate_timeframe_growth(archive_ws, current_tracks, days_back):
         else:
             rel_date = parse_release_date(t.get("album", {}).get("release_date"))
             days_old = (now - rel_date).days
-
+ 
             if days_back == 7:
                 recency_weight = max(0.0, 100.0 - (days_old / 30.0))
                 calc_score = curr_pop * 1.5 + recency_weight
@@ -409,24 +428,24 @@ def calculate_timeframe_growth(archive_ws, current_tracks, days_back):
             else:
                 catalog_weight = min(30.0, days_old / 365.0)
                 calc_score = curr_pop + catalog_weight
-
+ 
             t_copy["score"] = (float(calc_score), float(curr_pop))
             t_copy["growth_str"] = "+0"
-
+ 
         ranked_tracks.append(t_copy)
-
+ 
     ranked_tracks.sort(key=lambda x: x["score"], reverse=True)
     return ranked_tracks
-
-
+ 
+ 
 def prepare_leaderboard_rows(tracks, limit=100):
     today_str = datetime.now().strftime("%Y-%m-%d")
     rows = [["Rank", "Cover", "Artist", "Track Name", "Track ID", "Popularity", "Score Growth", "Date"]]
-
+ 
     for rank, track in enumerate(tracks[:limit], start=1):
         artist_names = ", ".join([a["name"] for a in track.get("artists", [])])
         growth_str = track.get("growth_str", "+0")
-
+ 
         rows.append([
             rank,
             get_track_image_url(track),
@@ -438,59 +457,65 @@ def prepare_leaderboard_rows(tracks, limit=100):
             today_str,
         ])
     return rows
-
-
+ 
+ 
 def update_sheet_tab(sheet, tab_name, rows):
     try:
         try:
             worksheet = sheet.worksheet(tab_name)
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sheet.add_worksheet(title=tab_name, rows="150", cols="10")
-
+ 
         worksheet.clear()
         worksheet.update(values=rows, range_name="A1")
         print(f"Updated '{tab_name}' tab with {len(rows)-1} items.")
     except Exception as e:
         print(f"Error updating '{tab_name}': {e}")
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Main Execution
 # ---------------------------------------------------------------------------
-
+ 
 def main():
     tracks = fetch_itunes_tracks()
     if not tracks:
         print("iTunes search returned 0 tracks. Aborting script.")
         return
-
+ 
     gc = get_gspread_client()
-    sheet_id = os.environ.get("SPREADSHEET_ID")
+    sheet_id = extract_spreadsheet_id(os.environ.get("SPREADSHEET_ID"))
     if not sheet_id:
-        raise ValueError("Missing SPREADSHEET_ID environment variable.")
+        raise ValueError(
+            "Missing SPREADSHEET_ID environment variable. Set it as a "
+            "repository secret and pass it to this step's env: block."
+        )
     sheet = gc.open_by_key(sheet_id)
-
+ 
     archive_ws = ensure_archive_tab(sheet)
     append_daily_snapshot(archive_ws, tracks)
-
+ 
+    # 1. Top 15 Artists
     artist_rows = prepare_artist_leaderboard_rows(tracks, limit=15)
     update_sheet_tab(sheet, "Top 15 Artists", artist_rows)
-
+ 
+    # 2. All-Time Most Heard
     all_time_rows = prepare_all_time_track_rows(tracks, limit=100)
     update_sheet_tab(sheet, "All-Time Tracks", all_time_rows)
-
+ 
+    # 3. Timeframe Growth Leaderboards
     timeframes = [
         ("Weekly Top 10", 7, 10),
         ("Monthly Top 100", 30, 100),
         ("3-Month Top 100", 90, 100),
         ("Yearly Top 100", 365, 100),
     ]
-
+ 
     for tab_name, days_back, limit in timeframes:
         ranked_tracks = calculate_timeframe_growth(archive_ws, tracks, days_back=days_back)
         rows = prepare_leaderboard_rows(ranked_tracks, limit=limit)
         update_sheet_tab(sheet, tab_name, rows)
-
-
+ 
+ 
 if __name__ == "__main__":
     main()
