@@ -1,0 +1,27 @@
+name: Update Habesha iTunes Leaderboard
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC — edit to taste
+  workflow_dispatch: {}     # lets you trigger it manually from the Actions tab
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python scraper.py
