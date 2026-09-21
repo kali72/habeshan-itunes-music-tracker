@@ -1,9 +1,19 @@
 const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=1349367991#gid=1349367991";
 const API_KEY = "AIzaSyBQMf2Ozc7MU0ZlYnLm486k2yO2ku4AiuE";
 
-fetch(`https://docs.google.com/spreadsheets/d/e/2PACX-1vSH4NvxYnf7isrIaWUkv1F5eVp5c6cYMsWs_aa6TgVlUCdNRqmyfCmHGuW6pLPkG-H0JNidnkrCdmrv/pub?output=csv`)
-  .then(res => res.text())
-  .then(csvText => parseAndRender(csvText));
+const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSH4NvxYnf7isrIaWUkv1F5eVp5c6cYMsWs_aa6TgVlUCdNRqmyfCmHGuW6pLPkG-H0JNidnkrCdmrv/pub?output=csv`;
+fetch(url)
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.text();
+  })
+  .then(csvText => {
+    // Parse your CSV data here
+    console.log(csvText);
+  })
+  .catch(error => console.error('Fetch error:', error));
 
 const CHARTS = [
   { containerId: "section-top-15-artists", anchorId: "top-15-artists", title: "Top 15 Artists", tabName: "Top 15 Artists" },
