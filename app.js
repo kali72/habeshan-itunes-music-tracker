@@ -1,7 +1,7 @@
 const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=1349367991#gid=1349367991";
 const API_KEY = "AIzaSyBQMf2Ozc7MU0ZlYnLm486k2yO2ku4AiuE";
 
-fetch(`https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=878683845#gid=878683845`)
+fetch(`https://docs.google.com/spreadsheets/d/e/2PACX-1vSH4NvxYnf7isrIaWUkv1F5eVp5c6cYMsWs_aa6TgVlUCdNRqmyfCmHGuW6pLPkG-H0JNidnkrCdmrv/pub?output=csv`)
   .then(res => res.text())
   .then(csvText => parseAndRender(csvText));
 
