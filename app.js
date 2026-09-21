@@ -1,6 +1,10 @@
 const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=1349367991#gid=1349367991";
 const API_KEY = "AIzaSyBQMf2Ozc7MU0ZlYnLm486k2yO2ku4AiuE";
 
+fetch(`https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=878683845#gid=878683845`)
+  .then(res => res.text())
+  .then(csvText => parseAndRender(csvText));
+
 const CHARTS = [
   { containerId: "section-top-15-artists", anchorId: "top-15-artists", title: "Top 15 Artists", tabName: "Top 15 Artists" },
   { containerId: "section-all-time-tracks", anchorId: "all-time-tracks", title: "All-Time Most Heard", tabName: "All-Time Tracks" },
