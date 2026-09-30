@@ -9,7 +9,7 @@ const loader = document.getElementById('loader');
 const sectionTitle = document.getElementById('section-title');
 
 // REPLACE WITH YOUR GOOGLE SHEETS / WEB APP API ENDPOINT
-const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbx6KkmV1NHOfsu7RJJgJNzUKDpkBFktwfo9URT88wN4xElrdXT_ptKJVAjqXI3E3gpc/exec";
+const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyWqRfkB66ePyyuKe3iBpsVA3LGuV70QSFMIn3RoUXH8Iq7QC5F5U1ZUWdPIHYiXxSh/exec";
 
 // Top 15 Habesha Artists List
 const TOP_15_ARTISTS = [
