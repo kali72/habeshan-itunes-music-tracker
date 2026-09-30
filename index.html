@@ -34,7 +34,7 @@
   <!-- TOP NAVIGATION BAR -->
   <header class="sticky top-0 z-50 bg-darkBg/90 backdrop-blur-md border-b border-gray-800/80 px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
     <!-- Logo -->
-    <a href="#" class="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+    <a href="#" onclick="loadFilterData('all-time')" class="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
       <span class="bg-brand text-black font-black px-2 py-0.5 rounded text-lg">H</span>
       <span>Habesha<span class="text-brand">Tracker</span></span>
     </a>
@@ -52,19 +52,21 @@
       </form>
     </div>
 
-    <!-- Quick Category Filter Pills -->
-    <nav class="hidden md:flex items-center gap-1 bg-cardBg p-1 rounded-full border border-gray-800 text-xs font-medium" id="category-pills">
-      <button data-query="Ethiopian Music" class="pill-btn active px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition">Top Tracks</button>
-      <button data-query="Aster Awoke" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Aster Awoke</button>
-      <button data-query="Rophnan" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Rophnan</button>
-      <button data-query="Teddy Afro" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Teddy Afro</button>
-      <button data-query="Eritrean Music" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Eritrean</button>
+    <!-- 1. Google Sheets Tab Navigation Pills -->
+    <nav class="hidden lg:flex items-center gap-1 bg-cardBg p-1 rounded-full border border-gray-800 text-xs font-medium" id="category-pills">
+      <button data-tab="all-time" class="pill-btn active px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition">All-Time Tracks</button>
+      <button data-tab="weekly" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Weekly Top 10</button>
+      <button data-tab="monthly" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Monthly Top 100</button>
+      <button data-tab="quarterly" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">3-Month Top 100</button>
+      <button data-tab="yearly" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Yearly Top 100</button>
+      <button data-tab="top-15-artists" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Top 15 Artists</button>
     </nav>
 
-    <!-- Header Actions -->
+    <!-- 3. Active iTunes Live Button -->
     <div class="flex items-center gap-3">
-      <button class="px-4 py-1.5 bg-brand hover:bg-yellow-500 text-black font-semibold text-sm rounded-full transition">
-        <i class="fa-brands fa-apple mr-1"></i> iTunes Live
+      <button id="itunes-live-btn" class="px-4 py-1.5 bg-brand hover:bg-yellow-500 text-black font-semibold text-sm rounded-full transition flex items-center gap-1.5">
+        <i class="fa-brands fa-apple text-base"></i>
+        <span>iTunes Live</span>
       </button>
     </div>
   </header>
@@ -77,18 +79,18 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 id="section-title" class="text-2xl font-bold flex items-center gap-2">
-            <span>Ethiopian Top Tracks</span>
+            <span>All-Time Top Tracks</span>
             <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
           </h2>
-          <p class="text-xs text-gray-400 mt-1">Live updates sourced directly from iTunes Store API</p>
+          <p id="section-subtitle" class="text-xs text-gray-400 mt-1">Sourced directly from your Habesha iTunes Google Sheet</p>
         </div>
 
-        <!-- Limit Selector -->
+        <!-- Limit Display Selector -->
         <div class="flex items-center gap-2 bg-cardBg rounded-lg p-1 text-xs border border-gray-800">
           <span class="text-gray-400 px-2">Show:</span>
-          <button data-limit="12" class="limit-btn active px-3 py-1 bg-gray-800 text-white rounded-md">12</button>
+          <button data-limit="12" class="limit-btn px-3 py-1 text-gray-400 hover:text-white">12</button>
           <button data-limit="24" class="limit-btn px-3 py-1 text-gray-400 hover:text-white">24</button>
-          <button data-limit="48" class="limit-btn px-3 py-1 text-gray-400 hover:text-white">48</button>
+          <button data-limit="48" class="limit-btn active px-3 py-1 bg-gray-800 text-white rounded-md">48</button>
         </div>
       </div>
 
@@ -99,7 +101,7 @@
 
       <!-- MEDIA CARD GRID -->
       <div id="music-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <!-- Dynamic Cards Rendered via JS -->
+        <!-- Track Cards Render Here -->
       </div>
     </section>
 
