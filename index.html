@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Music & Media Tracker</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Habesha iTunes Music Tracker</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome for Icons -->
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script>
     tailwind.config = {
@@ -14,9 +14,9 @@
       theme: {
         extend: {
           colors: {
-            brand: '#eab308', // Amber/Gold accent color
-            darkBg: '#0d0e12', // Dark background
-            cardBg: '#16181e', // Darker surface background
+            brand: '#eab308', // Gold accent
+            darkBg: '#0d0e12',
+            cardBg: '#16181e',
           }
         }
       }
@@ -27,39 +27,38 @@
 
   <!-- TOP NAVIGATION BAR -->
   <header class="sticky top-0 z-50 bg-darkBg/90 backdrop-blur-md border-b border-gray-800/80 px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
-    <!-- Brand Logo -->
-    <a href="#" class="flex items-center gap-2 text-xl font-bold tracking-tight text-white hover:opacity-90">
-      <span class="bg-brand text-black font-black px-2 py-0.5 rounded text-lg">P</span>
-      <span>Phono<span class="text-brand">Tracker</span></span>
+    <!-- Logo -->
+    <a href="#" class="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+      <span class="bg-brand text-black font-black px-2 py-0.5 rounded text-lg">H</span>
+      <span>Habesha<span class="text-brand">Tracker</span></span>
     </a>
 
-    <!-- Center Search Bar -->
+    <!-- Live Search Bar -->
     <div class="flex-1 max-w-xl mx-2">
-      <div class="relative">
+      <form id="search-form" class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
         <input 
+          id="search-input"
           type="text" 
-          placeholder="Search movies, shows, or artists..." 
+          placeholder="Search Ethiopian artists, songs, or albums..." 
           class="w-full bg-cardBg text-sm text-gray-200 placeholder-gray-500 rounded-full pl-10 pr-4 py-2 border border-gray-800 focus:outline-none focus:border-brand transition-colors"
         />
-      </div>
+      </form>
     </div>
 
-    <!-- Category Pills Navigation -->
-    <nav class="hidden md:flex items-center gap-1 bg-cardBg p-1 rounded-full border border-gray-800 text-xs font-medium">
-      <button class="px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition">All</button>
-      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Movie</button>
-      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">TV Show</button>
-      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Anime</button>
+    <!-- Quick Category Filter Pills -->
+    <nav class="hidden md:flex items-center gap-1 bg-cardBg p-1 rounded-full border border-gray-800 text-xs font-medium" id="category-pills">
+      <button data-query="Ethiopian Music" class="pill-btn px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition">Top Tracks</button>
+      <button data-query="Aster Awoke" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Aster Awoke</button>
+      <button data-query="Rophnan" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Rophnan</button>
+      <button data-query="Teddy Afro" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Teddy Afro</button>
+      <button data-query="Eritrean Music" class="pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Eritrean</button>
     </nav>
 
-    <!-- User Action Controls -->
+    <!-- Header Actions -->
     <div class="flex items-center gap-3">
-      <button class="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-800 transition">
-        <i class="fa-solid fa-grip-vertical"></i>
-      </button>
       <button class="px-4 py-1.5 bg-brand hover:bg-yellow-500 text-black font-semibold text-sm rounded-full transition">
-        Sign in
+        <i class="fa-brands fa-apple mr-1"></i> iTunes Live
       </button>
     </div>
   </header>
@@ -67,108 +66,212 @@
   <!-- MAIN CONTAINER -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-    <!-- SECTION 1: TRENDING MEDIA -->
+    <!-- TRACKER SECTION -->
     <section>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold flex items-center gap-2">
-          <span>Trending</span>
-          <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
-        </h2>
-        <div class="flex bg-cardBg rounded-lg p-1 text-xs border border-gray-800 font-medium">
-          <button class="px-3 py-1 bg-gray-800 text-white rounded-md">Day</button>
-          <button class="px-3 py-1 text-gray-400 hover:text-white">Week</button>
-          <button class="px-3 py-1 text-gray-400 hover:text-white">Month</button>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 id="section-title" class="text-2xl font-bold flex items-center gap-2">
+            <span>Ethiopian Top Tracks</span>
+            <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+          </h2>
+          <p class="text-xs text-gray-400 mt-1">Live updates sourced directly from iTunes Store</p>
+        </div>
+
+        <!-- Limit Selector -->
+        <div class="flex items-center gap-2 bg-cardBg rounded-lg p-1 text-xs border border-gray-800">
+          <span class="text-gray-400 px-2">Show:</span>
+          <button data-limit="12" class="limit-btn px-3 py-1 bg-gray-800 text-white rounded-md">12</button>
+          <button data-limit="24" class="limit-btn px-3 py-1 text-gray-400 hover:text-white">24</button>
+          <button data-limit="48" class="limit-btn px-3 py-1 text-gray-400 hover:text-white">48</button>
         </div>
       </div>
 
+      <!-- LOADER SPINNER -->
+      <div id="loader" class="hidden flex justify-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-brand border-t-transparent"></div>
+      </div>
+
       <!-- MEDIA CARD GRID -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-
-        <!-- CARD ITEM 1 -->
-        <div class="group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300">
-          <div class="relative aspect-[2/3] overflow-hidden bg-gray-900">
-            <!-- Rank Badge -->
-            <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-sm px-2 py-0.5 rounded border border-brand/30">
-              1
-            </span>
-            <!-- Poster Image -->
-            <img 
-              src="https://via.placeholder.com/300x450/1e293b/ffffff?text=MobLand" 
-              alt="MobLand Poster" 
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <!-- Quick Action Hover Overlay -->
-            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
-              <div class="flex justify-end">
-                <button class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
-                  <i class="fa-regular fa-bookmark text-sm"></i>
-                </button>
-              </div>
-              <div class="flex justify-center">
-                <button class="p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
-                  <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
-                </button>
-              </div>
-              <div class="text-right">
-                <span class="text-xs bg-black/60 px-2 py-1 rounded text-gray-300">
-                  <i class="fa-solid fa-star text-brand mr-1"></i>8.3
-                </span>
-              </div>
-            </div>
-          </div>
-          <!-- Card Info -->
-          <div class="p-3">
-            <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors">MobLand</h3>
-            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-              <span>8.3</span>
-              <span>•</span>
-              <span>2025</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- CARD ITEM 2 -->
-        <div class="group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300">
-          <div class="relative aspect-[2/3] overflow-hidden bg-gray-900">
-            <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-sm px-2 py-0.5 rounded border border-brand/30">
-              2
-            </span>
-            <img 
-              src="https://via.placeholder.com/300x450/334155/ffffff?text=The+Love+Hypothesis" 
-              alt="Poster" 
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
-              <div class="flex justify-end">
-                <button class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
-                  <i class="fa-regular fa-bookmark text-sm"></i>
-                </button>
-              </div>
-              <div class="flex justify-center">
-                <button class="p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
-                  <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
-                </button>
-              </div>
-              <div class="text-right">
-                <span class="text-xs bg-black/60 px-2 py-1 rounded text-gray-300">
-                  <i class="fa-solid fa-star text-brand mr-1"></i>7.2
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="p-3">
-            <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors">The Love Hypothesis</h3>
-            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-              <span>7.2</span>
-              <span>•</span>
-              <span>2026</span>
-            </p>
-          </div>
-        </div>
-
+      <div id="music-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <!-- Dynamic Music Cards Render Here -->
       </div>
     </section>
 
   </main>
+
+  <!-- AUDIO PLAYER CONTROLLER (Hidden Audio Element) -->
+  <audio id="audio-player"></audio>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let currentQuery = "Ethiopian Music";
+    let currentLimit = 12;
+    let currentlyPlayingBtn = null;
+
+    const audioPlayer = document.getElementById('audio-player');
+    const musicGrid = document.getElementById('music-grid');
+    const loader = document.getElementById('loader');
+    const sectionTitle = document.getElementById('section-title');
+
+    // Fetch data from iTunes API
+    async function fetchHabeshaMusic(term, limit = 12) {
+      loader.classList.remove('hidden');
+      musicGrid.innerHTML = '';
+
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=${limit}`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        renderMusicCards(data.results);
+      } catch (error) {
+        console.error('Error fetching iTunes data:', error);
+        musicGrid.innerHTML = `<p class="col-span-full text-center text-red-400 py-10">Failed to load songs from iTunes. Please try again.</p>`;
+      } finally {
+        loader.classList.add('hidden');
+      }
+    }
+
+    // Render Music Cards into the Grid
+    function renderMusicCards(tracks) {
+      if (!tracks || tracks.length === 0) {
+        musicGrid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-10">No tracks found. Try searching for another artist!</p>`;
+        return;
+      }
+
+      tracks.forEach((track, index) => {
+        // Get high resolution cover image (300x300)
+        const artwork = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300';
+        const releaseYear = track.releaseDate ? new Date(track.releaseDate).getFullYear() : 'N/A';
+
+        const card = document.createElement('div');
+        card.className = "group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300";
+        
+        card.innerHTML = `
+          <div class="relative aspect-[1/1] overflow-hidden bg-gray-900">
+            <!-- Rank Badge -->
+            <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-xs px-2 py-0.5 rounded border border-brand/30">
+              #${index + 1}
+            </span>
+
+            <!-- Cover Image -->
+            <img src="${artwork}" alt="${track.trackName}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+
+            <!-- Hover Action Overlay -->
+            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
+              <div class="flex justify-end">
+                <a href="${track.trackViewUrl}" target="_blank" title="View on iTunes" class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
+                  <i class="fa-brands fa-apple text-sm"></i>
+                </a>
+              </div>
+
+              <!-- Play Preview Button -->
+              <div class="flex justify-center">
+                <button 
+                  data-preview="${track.previewUrl}" 
+                  class="play-btn p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
+                  <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
+                </button>
+              </div>
+
+              <div class="text-right">
+                <span class="text-[10px] bg-black/70 px-2 py-1 rounded text-gray-300 font-medium">
+                  ${track.primaryGenreName || 'Habesha'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Details -->
+          <div class="p-3">
+            <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors" title="${track.trackName}">
+              ${track.trackName}
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5 truncate">${track.artistName}</p>
+            <p class="text-[11px] text-gray-500 mt-1 flex items-center justify-between">
+              <span>${releaseYear}</span>
+              <span class="text-brand font-medium">${track.trackPrice > 0 ? '$' + track.trackPrice : 'iTunes'}</span>
+            </p>
+          </div>
+        `;
+
+        musicGrid.appendChild(card);
+      });
+
+      attachPlayListeners();
+    }
+
+    // Attach Play Preview Listener
+    function attachPlayListeners() {
+      document.querySelectorAll('.play-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const previewUrl = btn.getAttribute('data-preview');
+          const icon = btn.querySelector('i');
+
+          if (audioPlayer.src === previewUrl && !audioPlayer.paused) {
+            audioPlayer.pause();
+            icon.className = 'fa-solid fa-play text-lg translate-x-0.5';
+          } else {
+            if (currentlyPlayingBtn) {
+              currentlyPlayingBtn.querySelector('i').className = 'fa-solid fa-play text-lg translate-x-0.5';
+            }
+            audioPlayer.src = previewUrl;
+            audioPlayer.play();
+            icon.className = 'fa-solid fa-pause text-lg';
+            currentlyPlayingBtn = btn;
+          }
+        });
+      });
+    }
+
+    // Handle Search Bar Input
+    document.getElementById('search-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const query = document.getElementById('search-input').value.trim();
+      if (query) {
+        currentQuery = query;
+        sectionTitle.querySelector('span').textContent = `Search: "${query}"`;
+        fetchHabeshaMusic(currentQuery, currentLimit);
+      }
+    });
+
+    // Handle Category Filter Buttons
+    document.querySelectorAll('.pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.pill-btn').forEach(b => {
+          b.className = "pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition";
+        });
+        btn.className = "pill-btn px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition";
+
+        currentQuery = btn.getAttribute('data-query');
+        sectionTitle.querySelector('span').textContent = btn.textContent;
+        fetchHabeshaMusic(currentQuery, currentLimit);
+      });
+    });
+
+    // Handle Item Display Limit Buttons
+    document.querySelectorAll('.limit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.limit-btn').forEach(b => {
+          b.className = "limit-btn px-3 py-1 text-gray-400 hover:text-white";
+        });
+        btn.className = "limit-btn px-3 py-1 bg-gray-800 text-white rounded-md";
+
+        currentLimit = parseInt(btn.getAttribute('data-limit'));
+        fetchHabeshaMusic(currentQuery, currentLimit);
+      });
+    });
+
+    // Reset play icon when track finishes playing
+    audioPlayer.addEventListener('ended', () => {
+      if (currentlyPlayingBtn) {
+        currentlyPlayingBtn.querySelector('i').className = 'fa-solid fa-play text-lg translate-x-0.5';
+      }
+    });
+
+    // Initial Load
+    fetchHabeshaMusic(currentQuery, currentLimit);
+  </script>
 </body>
 </html>
