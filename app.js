@@ -1,42 +1,42 @@
-// Application State
-let currentFilter = "all-time"; // Options: top-15-artists, all-time, weekly, monthly, quarterly, yearly
+// Configuration & State
+const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyWqRfkB66ePyyuKe3iBpsVA3LGuV70QSFMIn3RoUXH8Iq7QC5F5U1ZUWdPIHYiXxSh/exec"; // Replace with your Web App Exec URL
+
+let currentFilter = "all-time";
+let currentLimit = 48;
 let currentlyPlayingBtn = null;
+let currentTrackList = [];
 
 // DOM Elements
 const audioPlayer = document.getElementById('audio-player');
 const musicGrid = document.getElementById('music-grid');
 const loader = document.getElementById('loader');
 const sectionTitle = document.getElementById('section-title');
+const sectionSubtitle = document.getElementById('section-subtitle');
+const searchForm = document.getElementById('search-form');
+const searchInput = document.getElementById('search-input');
+const itunesLiveBtn = document.getElementById('itunes-live-btn');
 
-// REPLACE WITH YOUR GOOGLE SHEETS / WEB APP API ENDPOINT
-const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyWqRfkB66ePyyuKe3iBpsVA3LGuV70QSFMIn3RoUXH8Iq7QC5F5U1ZUWdPIHYiXxSh/exec";
-
-// Top 15 Habesha Artists List
-const TOP_15_ARTISTS = [
-  "Aster Aweke", "Teddy Afro", "Rophnan", "Gigi", "Tilahun Gessesse",
-  "Mahmoud Ahmed", "Mulatu Astatke", "Gossaye Tesfaye", "Veronica Adane",
-  "Sileshi Demissie", "Abinet Agonafir", "Ephrem Tamiru", "Jbo Jay",
-  "Betty G", "Dan Admasu"
-];
-
-// Fetch Rankings from Google Sheets
+// --- 1. GOOGLE SHEETS TAB FETCHING ---
 async function fetchSheetRankings(timeframe) {
   try {
     const response = await fetch(`${GOOGLE_SHEETS_ENDPOINT}?timeframe=${timeframe}`);
     const sheetData = await response.json();
-    return sheetData; // Expected format: [{ trackId: "123456" }, ...] or [{ artistName: "...", trackName: "..." }]
+    return sheetData || [];
   } catch (error) {
     console.error('Error fetching Google Sheets data:', error);
     return [];
   }
 }
 
-// Fetch Full Metadata from iTunes Lookup API using Track IDs
+// Fetch iTunes details for a list of track IDs
 async function fetchiTunesDetailsByIds(trackIds) {
   if (!trackIds || trackIds.length === 0) return [];
   
-  const idsString = trackIds.join(',');
-  const url = `https://itunes.apple.com/lookup?id=${idsString}`;
+  // Clean IDs and join into comma-separated list
+  const validIds = trackIds.filter(id => id).join(',');
+  if (!validIds) return [];
+
+  const url = `https://itunes.apple.com/lookup?id=${validIds}`;
 
   try {
     const response = await fetch(url);
@@ -48,88 +48,104 @@ async function fetchiTunesDetailsByIds(trackIds) {
   }
 }
 
-// Fetch Tracks for Specific Artists via iTunes Search
-async function fetchTracksForArtists(artistList, limitPerArtist = 3) {
-  try {
-    const promises = artistList.map(artist =>
-      fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&limit=${limitPerArtist}`)
-        .then(res => res.json())
-        .then(data => data.results || [])
-    );
+// Filter Navigation Handler
+async function loadFilterData(filterType) {
+  currentFilter = filterType;
+  showLoader(true);
+  
+  let tracks = [];
+  const tabTitles = {
+    'all-time': 'All-Time Tracks',
+    'weekly': 'Weekly Top 10',
+    'monthly': 'Monthly Top 100',
+    'quarterly': '3-Month Top 100',
+    'yearly': 'Yearly Top 100',
+    'top-15-artists': 'Top 15 Artists'
+  };
 
-    const resultsArray = await Promise.all(promises);
-    let allTracks = resultsArray.flat();
-    return Array.from(new Map(allTracks.map(track => [track.trackId, track])).values());
+  sectionTitle.querySelector('span').textContent = tabTitles[filterType] || 'Tracks';
+  sectionSubtitle.textContent = 'Sourced directly from your Habesha iTunes Google Sheet';
+
+  // Fetch row items from selected Google Sheet tab
+  const rawSheetRows = await fetchSheetRankings(filterType);
+  
+  if (rawSheetRows.length > 0) {
+    const trackIds = rawSheetRows.map(row => row.trackId || row['Track ID']).filter(id => id);
+    if (trackIds.length > 0) {
+      tracks = await fetchiTunesDetailsByIds(trackIds);
+    }
+  }
+
+  // Fallback: If no tracks loaded from sheet, fetch live search fallback
+  if (!tracks || tracks.length === 0) {
+    tracks = await fetchLiveiTunesSearch("Ethiopian Music", 24);
+  }
+
+  currentTrackList = tracks;
+  showLoader(false);
+  renderMusicCards(currentTrackList.slice(0, currentLimit));
+}
+
+// --- 2. LIVE SEARCH BAR FUNCTIONALITY ---
+async function fetchLiveiTunesSearch(query, limit = 24) {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=${limit}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.results || [];
   } catch (error) {
-    console.error('Error fetching artist search:', error);
+    console.error('iTunes Search API Error:', error);
     return [];
   }
 }
 
-// Main Filter Handler
-async function loadFilterData(filterType) {
-  currentFilter = filterType;
-  loader.classList.remove('hidden');
-  musicGrid.innerHTML = '';
+// Handle Search Form Submission
+searchForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const query = searchInput.value.trim();
+  if (!query) return;
 
-  let tracks = [];
+  showLoader(true);
+  sectionTitle.querySelector('span').textContent = `Search Results: "${query}"`;
+  sectionSubtitle.textContent = 'Live search directly from iTunes Store API';
 
-  switch (filterType) {
-    case 'top-15-artists':
-      sectionTitle.querySelector('span').textContent = 'Top 15 Habesha Artists';
-      tracks = await fetchTracksForArtists(TOP_15_ARTISTS, 5);
-      break;
+  // Clear active state on header pills
+  document.querySelectorAll('.pill-btn').forEach(b => {
+    b.className = "pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition";
+  });
 
-    case 'all-time':
-      sectionTitle.querySelector('span').textContent = 'All-Time Top 15 Tracks';
-      // Fetch Track IDs for 'all-time' from Google Sheets
-      const allTimeData = await fetchSheetRankings('all-time');
-      const allTimeIds = allTimeData.map(item => item.trackId);
-      tracks = await fetchiTunesDetailsByIds(allTimeIds);
-      break;
+  const searchResults = await fetchLiveiTunesSearch(query, 48);
+  currentTrackList = searchResults;
+  
+  showLoader(false);
+  renderMusicCards(currentTrackList.slice(0, currentLimit));
+});
 
-    case 'weekly':
-      sectionTitle.querySelector('span').textContent = 'Weekly Top 10';
-      const weeklyData = await fetchSheetRankings('weekly');
-      const weeklyIds = weeklyData.slice(0, 10).map(item => item.trackId);
-      tracks = await fetchiTunesDetailsByIds(weeklyIds);
-      break;
+// --- 3. ITUNES LIVE BUTTON FUNCTIONALITY ---
+itunesLiveBtn.addEventListener('click', async () => {
+  showLoader(true);
+  sectionTitle.querySelector('span').textContent = "iTunes Live: Hot Ethiopian Tracks";
+  sectionSubtitle.textContent = "Fetching live trending Ethiopian music directly from iTunes Store";
 
-    case 'monthly':
-      sectionTitle.querySelector('span').textContent = 'Monthly Top 100';
-      const monthlyData = await fetchSheetRankings('monthly');
-      const monthlyIds = monthlyData.slice(0, 100).map(item => item.trackId);
-      tracks = await fetchiTunesDetailsByIds(monthlyIds);
-      break;
+  // Clear active tab styles
+  document.querySelectorAll('.pill-btn').forEach(b => {
+    b.className = "pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition";
+  });
 
-    case 'quarterly':
-      sectionTitle.querySelector('span').textContent = 'Quarterly Top 100';
-      const quarterlyData = await fetchSheetRankings('quarterly');
-      const quarterlyIds = quarterlyData.slice(0, 100).map(item => item.trackId);
-      tracks = await fetchiTunesDetailsByIds(quarterlyIds);
-      break;
+  // Fetch fresh live hits directly from iTunes
+  const liveTracks = await fetchLiveiTunesSearch("Ethiopian New", 48);
+  currentTrackList = liveTracks;
 
-    case 'yearly':
-      sectionTitle.querySelector('span').textContent = 'Yearly Top 100';
-      const yearlyData = await fetchSheetRankings('yearly');
-      const yearlyIds = yearlyData.slice(0, 100).map(item => item.trackId);
-      tracks = await fetchiTunesDetailsByIds(yearlyIds);
-      break;
+  showLoader(false);
+  renderMusicCards(currentTrackList.slice(0, currentLimit));
+});
 
-    default:
-      tracks = await fetchTracksForArtists(["Ethiopian Music"], 15);
-  }
-
-  loader.classList.add('hidden');
-  renderMusicCards(tracks);
-}
-
-// Render Music Cards Grid
+// --- CARD RENDERING & AUDIO PLAYER ---
 function renderMusicCards(tracks) {
   musicGrid.innerHTML = '';
 
   if (!tracks || tracks.length === 0) {
-    musicGrid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-10">No tracks available for this section.</p>`;
+    musicGrid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-10">No tracks found. Try selecting another tab or search query!</p>`;
     return;
   }
 
@@ -182,13 +198,15 @@ function renderMusicCards(tracks) {
   attachPlayListeners();
 }
 
-// Audio Play Listeners
+// Attach Event Listeners to Audio Play Buttons
 function attachPlayListeners() {
   document.querySelectorAll('.play-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const previewUrl = btn.getAttribute('data-preview');
       const icon = btn.querySelector('i');
+
+      if (!previewUrl) return;
 
       if (audioPlayer.src === previewUrl && !audioPlayer.paused) {
         audioPlayer.pause();
@@ -205,6 +223,49 @@ function attachPlayListeners() {
     });
   });
 }
+
+// Category Pills Tab Click Handler
+document.querySelectorAll('.pill-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pill-btn').forEach(b => {
+      b.className = "pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition";
+    });
+    btn.className = "pill-btn active px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition";
+
+    const targetTab = btn.getAttribute('data-tab');
+    loadFilterData(targetTab);
+  });
+});
+
+// Limit Display Count Buttons Handler
+document.querySelectorAll('.limit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.limit-btn').forEach(b => {
+      b.className = "limit-btn px-3 py-1 text-gray-400 hover:text-white";
+    });
+    btn.className = "limit-btn active px-3 py-1 bg-gray-800 text-white rounded-md";
+
+    currentLimit = parseInt(btn.getAttribute('data-limit'));
+    renderMusicCards(currentTrackList.slice(0, currentLimit));
+  });
+});
+
+// Helpers
+function showLoader(visible) {
+  if (visible) {
+    loader.classList.remove('hidden');
+    musicGrid.innerHTML = '';
+  } else {
+    loader.classList.add('hidden');
+  }
+}
+
+// Reset play icon when audio finishes playing
+audioPlayer.addEventListener('ended', () => {
+  if (currentlyPlayingBtn) {
+    currentlyPlayingBtn.querySelector('i').className = 'fa-solid fa-play text-lg translate-x-0.5';
+  }
+});
 
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {
