@@ -1,63 +1,174 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habesha iTunes Music Tracker</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Music & Media Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#eab308', // Amber/Gold accent color
+            darkBg: '#0d0e12', // Dark background
+            cardBg: '#16181e', // Darker surface background
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="bg-darkBg text-gray-100 font-sans min-h-screen antialiased selection:bg-brand selection:text-black">
 
-  <header class="header">
-    <div class="header-container">
-      <div class="logo-area">
-        <h1>Habesha Music Tracker</h1>
-        <p class="subtitle">Daily iTunes & Apple Music Chart Leaderboards</p>
+  <!-- TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-50 bg-darkBg/90 backdrop-blur-md border-b border-gray-800/80 px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+    <!-- Brand Logo -->
+    <a href="#" class="flex items-center gap-2 text-xl font-bold tracking-tight text-white hover:opacity-90">
+      <span class="bg-brand text-black font-black px-2 py-0.5 rounded text-lg">P</span>
+      <span>Phono<span class="text-brand">Tracker</span></span>
+    </a>
+
+    <!-- Center Search Bar -->
+    <div class="flex-1 max-w-xl mx-2">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input 
+          type="text" 
+          placeholder="Search movies, shows, or artists..." 
+          class="w-full bg-cardBg text-sm text-gray-200 placeholder-gray-500 rounded-full pl-10 pr-4 py-2 border border-gray-800 focus:outline-none focus:border-brand transition-colors"
+        />
       </div>
-      <button id="theme-toggle" class="btn-theme" aria-label="Toggle theme">☀️ Light Mode</button>
+    </div>
+
+    <!-- Category Pills Navigation -->
+    <nav class="hidden md:flex items-center gap-1 bg-cardBg p-1 rounded-full border border-gray-800 text-xs font-medium">
+      <button class="px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition">All</button>
+      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Movie</button>
+      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">TV Show</button>
+      <button class="px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition">Anime</button>
+    </nav>
+
+    <!-- User Action Controls -->
+    <div class="flex items-center gap-3">
+      <button class="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-800 transition">
+        <i class="fa-solid fa-grip-vertical"></i>
+      </button>
+      <button class="px-4 py-1.5 bg-brand hover:bg-yellow-500 text-black font-semibold text-sm rounded-full transition">
+        Sign in
+      </button>
     </div>
   </header>
 
-  <nav class="nav-bar">
-    <div class="nav-container">
-      <a href="#top-15-artists" class="nav-link">Top 15 Artists</a>
-      <a href="#all-time-tracks" class="nav-link">All-Time</a>
-      <a href="#weekly-top-10" class="nav-link">Weekly Top 10</a>
-      <a href="#monthly-top-100" class="nav-link">Monthly</a>
-      <a href="#three-month-top-100" class="nav-link">3-Month</a>
-      <a href="#yearly-top-100" class="nav-link">Yearly</a>
-    </div>
-  </nav>
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-  <main class="main-layout">
-    <!-- Top Row: 2 Columns -->
-    <div class="grid-two-col">
-      <div id="section-top-15-artists"></div>
-      <div id="section-weekly-top-10"></div>
-    </div>
+    <!-- SECTION 1: TRENDING MEDIA -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold flex items-center gap-2">
+          <span>Trending</span>
+          <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+        </h2>
+        <div class="flex bg-cardBg rounded-lg p-1 text-xs border border-gray-800 font-medium">
+          <button class="px-3 py-1 bg-gray-800 text-white rounded-md">Day</button>
+          <button class="px-3 py-1 text-gray-400 hover:text-white">Week</button>
+          <button class="px-3 py-1 text-gray-400 hover:text-white">Month</button>
+        </div>
+      </div>
 
-    <!-- Middle Row: 3 Columns -->
-    <div class="grid-three-col">
-      <div id="section-monthly-top-100"></div>
-      <div id="section-three-month-top-100"></div>
-      <div id="section-yearly-top-100"></div>
-    </div>
+      <!-- MEDIA CARD GRID -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
 
-    <!-- Bottom Row: Full Width -->
-    <div class="grid-full-width">
-      <div id="section-all-time-tracks"></div>
-    </div>
+        <!-- CARD ITEM 1 -->
+        <div class="group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300">
+          <div class="relative aspect-[2/3] overflow-hidden bg-gray-900">
+            <!-- Rank Badge -->
+            <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-sm px-2 py-0.5 rounded border border-brand/30">
+              1
+            </span>
+            <!-- Poster Image -->
+            <img 
+              src="https://via.placeholder.com/300x450/1e293b/ffffff?text=MobLand" 
+              alt="MobLand Poster" 
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <!-- Quick Action Hover Overlay -->
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
+              <div class="flex justify-end">
+                <button class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
+                  <i class="fa-regular fa-bookmark text-sm"></i>
+                </button>
+              </div>
+              <div class="flex justify-center">
+                <button class="p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
+                  <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
+                </button>
+              </div>
+              <div class="text-right">
+                <span class="text-xs bg-black/60 px-2 py-1 rounded text-gray-300">
+                  <i class="fa-solid fa-star text-brand mr-1"></i>8.3
+                </span>
+              </div>
+            </div>
+          </div>
+          <!-- Card Info -->
+          <div class="p-3">
+            <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors">MobLand</h3>
+            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+              <span>8.3</span>
+              <span>•</span>
+              <span>2025</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- CARD ITEM 2 -->
+        <div class="group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300">
+          <div class="relative aspect-[2/3] overflow-hidden bg-gray-900">
+            <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-sm px-2 py-0.5 rounded border border-brand/30">
+              2
+            </span>
+            <img 
+              src="https://via.placeholder.com/300x450/334155/ffffff?text=The+Love+Hypothesis" 
+              alt="Poster" 
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
+              <div class="flex justify-end">
+                <button class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
+                  <i class="fa-regular fa-bookmark text-sm"></i>
+                </button>
+              </div>
+              <div class="flex justify-center">
+                <button class="p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
+                  <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
+                </button>
+              </div>
+              <div class="text-right">
+                <span class="text-xs bg-black/60 px-2 py-1 rounded text-gray-300">
+                  <i class="fa-solid fa-star text-brand mr-1"></i>7.2
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3">
+            <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors">The Love Hypothesis</h3>
+            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+              <span>7.2</span>
+              <span>•</span>
+              <span>2026</span>
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
   </main>
-
-  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
-
-  <footer class="footer">
-    <p>Data powered by iTunes Search API & Google Sheets. Updated daily via GitHub Actions.</p>
-  </footer>
-
-  <script src="app.js"></script>
 </body>
 </html>
