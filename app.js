@@ -1,217 +1,174 @@
-const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1d47CrkudCjDmQueiiQYsnvc6J-XEN9a4-0SJSRCQayQ/edit?gid=1349367991#gid=1349367991";
-const API_KEY = "AIzaSyBQMf2Ozc7MU0ZlYnLm486k2yO2ku4AiuE";
+// Application State
+let currentQuery = "Ethiopian Music";
+let currentLimit = 12;
+let currentlyPlayingBtn = null;
 
-const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSH4NvxYnf7isrIaWUkv1F5eVp5c6cYMsWs_aa6TgVlUCdNRqmyfCmHGuW6pLPkG-H0JNidnkrCdmrv/pub?output=csv`;
-fetch(url)
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.text();
-  })
-  .then(csvText => {
-    // Parse your CSV data here
-    console.log(csvText);
-  })
-  .catch(error => console.error('Fetch error:', error));
+// DOM Elements
+const audioPlayer = document.getElementById('audio-player');
+const musicGrid = document.getElementById('music-grid');
+const loader = document.getElementById('loader');
+const sectionTitle = document.getElementById('section-title');
 
-const CHARTS = [
-  { containerId: "section-top-15-artists", anchorId: "top-15-artists", title: "Top 15 Artists", tabName: "Top 15 Artists" },
-  { containerId: "section-all-time-tracks", anchorId: "all-time-tracks", title: "All-Time Most Heard", tabName: "All-Time Tracks" },
-  { containerId: "section-weekly-top-10", anchorId: "weekly-top-10", title: "Weekly Top 10", tabName: "Weekly Top 10" },
-  { containerId: "section-monthly-top-100", anchorId: "monthly-top-100", title: "Monthly Top 100", tabName: "Monthly Top 100" },
-  { containerId: "section-three-month-top-100", anchorId: "three-month-top-100", title: "3-Month Top 100", tabName: "3-Month Top 100" },
-  { containerId: "section-yearly-top-100", anchorId: "yearly-top-100", title: "Yearly Top 100", tabName: "Yearly Top 100" }
-];
+// Fetch data from iTunes API
+async function fetchHabeshaMusic(term, limit = 12) {
+  loader.classList.remove('hidden');
+  musicGrid.innerHTML = '';
 
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  initBackToTop();
-  loadAllLeaderboards();
-});
-
-function initTheme() {
-  const toggleBtn = document.getElementById("theme-toggle");
-  if (!toggleBtn) return;
-
-  const savedTheme = localStorage.getItem("theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const currentTheme = savedTheme || (prefersDark ? "dark" : "light");
-
-  document.documentElement.setAttribute("data-theme", currentTheme);
-  updateToggleText(toggleBtn, currentTheme);
-
-  toggleBtn.addEventListener("click", () => {
-    const activeTheme = document.documentElement.getAttribute("data-theme");
-    const newTheme = activeTheme === "dark" ? "light" : "dark";
-
-    document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem("theme", newTheme);
-    updateToggleText(toggleBtn, newTheme);
-  });
-}
-
-function updateToggleText(button, theme) {
-  button.innerHTML = theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode";
-}
-
-async function loadAllLeaderboards() {
-  CHARTS.forEach(chart => {
-    const wrapper = document.getElementById(chart.containerId);
-    if (wrapper) {
-      wrapper.innerHTML = `
-        <section id="${chart.anchorId}" class="ranking-section">
-          <h2 class="section-title">${escapeHtml(chart.title)}</h2>
-          <p style="color: var(--text-muted);">Loading chart...</p>
-        </section>
-      `;
-    }
-  });
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=${limit}`;
 
   try {
-    const fetchPromises = CHARTS.map(chart => {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/'${encodeURIComponent(chart.tabName)}'!A1:G101?key=${API_KEY}`;
-      return fetch(url)
-        .then(res => res.ok ? res.json() : null)
-        .catch(() => null);
-    });
-
-    const results = await Promise.all(fetchPromises);
-
-    CHARTS.forEach((chart, index) => {
-      const wrapper = document.getElementById(chart.containerId);
-      if (!wrapper) return;
-
-      const data = results[index];
-      const rows = data ? data.values : null;
-
-      let sectionContent = `<h2 class="section-title">${escapeHtml(chart.title)}</h2>`;
-
-      if (rows && rows.length > 1) {
-        sectionContent += generateTableHtml(rows, chart.tabName);
-      } else {
-        sectionContent += `<p style="color: var(--text-muted);">No data currently available.</p>`;
-      }
-
-      wrapper.innerHTML = `
-        <section id="${chart.anchorId}" class="ranking-section">
-          ${sectionContent}
-        </section>
-      `;
-    });
+    const response = await fetch(url);
+    const data = await response.json();
+    renderMusicCards(data.results);
   } catch (error) {
-    console.error("Fetch error:", error);
+    console.error('Error fetching iTunes data:', error);
+    musicGrid.innerHTML = `<p class="col-span-full text-center text-red-400 py-10">Failed to load songs from iTunes. Please try again.</p>`;
+  } finally {
+    loader.classList.add('hidden');
   }
 }
 
-// Builds a URL-safe slug from a track title for the Apple Music link.
-// Apple ignores this segment for routing (only the trailing numeric ID
-// matters), but the link 404s/misbehaves without a "/song/{slug}/{id}"
-// shape -- "/album/{id}" is the wrong path entirely.
-function slugify(str) {
-  return String(str)
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "track";
-}
+// Render Music Cards into the Grid
+function renderMusicCards(tracks) {
+  if (!tracks || tracks.length === 0) {
+    musicGrid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-10">No tracks found. Try searching for another artist!</p>`;
+    return;
+  }
 
-function generateTableHtml(rows, tabName) {
-  const dataRows = rows.slice(1);
-  const isArtistTable = tabName === "Top 15 Artists";
+  tracks.forEach((track, index) => {
+    // Obtain high-res artwork URL (300x300)
+    const artwork = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300';
+    const releaseYear = track.releaseDate ? new Date(track.releaseDate).getFullYear() : 'N/A';
 
-  let tableHtml = `
-    <div class="table-container">
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cover</th>
-            ${isArtistTable ? `<th>Artist</th><th>Bio</th>` : `<th>Title</th><th>Artist</th>`}
-          </tr>
-        </thead>
-        <tbody>
-  `;
+    const card = document.createElement('div');
+    card.className = "group relative bg-cardBg rounded-xl overflow-hidden border border-gray-800/80 hover:border-gray-700 transition-all duration-300";
+    
+    card.innerHTML = `
+      <div class="relative aspect-[1/1] overflow-hidden bg-gray-900">
+        <!-- Rank Badge -->
+        <span class="absolute top-2 left-2 z-10 bg-black/70 backdrop-blur-md text-brand font-black text-xs px-2 py-0.5 rounded border border-brand/30">
+          #${index + 1}
+        </span>
 
-  dataRows.forEach((row) => {
-    const rank = row[0] || "";
-    const coverUrl = row[1] || "";
-    const col3 = row[2] || "";
-    const col4 = row[3] || "";
-    const trackId = row[4] || "";
+        <!-- Cover Image -->
+        <img src="${artwork}" alt="${track.trackName}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
 
-    // Apple Music web links are shaped /{storefront}/song/{slug}/{trackId}.
-    const itunesUrl = trackId && !isArtistTable
-      ? `https://music.apple.com/us/song/${slugify(col4)}/${escapeHtml(trackId)}`
-      : "#";
-
-    const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
-    const imgSrc = coverUrl ? escapeHtml(coverUrl) : fallbackImg;
-
-    if (isArtistTable) {
-      tableHtml += `
-        <tr>
-          <td><span class="rank-badge rank-${escapeHtml(rank)}">${escapeHtml(rank)}</span></td>
-          <td>
-            <img src="${imgSrc}" 
-                 onerror="this.onerror=null;this.src='${fallbackImg}';" 
-                 alt="${escapeHtml(col3)}" 
-                 class="track-cover artist-avatar" 
-                 loading="lazy" />
-          </td>
-          <td class="track-title-cell"><strong>${escapeHtml(col3)}</strong></td>
-          <td class="track-artist artist-bio">${escapeHtml(col4)}</td>
-        </tr>
-      `;
-    } else {
-      tableHtml += `
-        <tr class="clickable-row" onclick="window.open('${itunesUrl}', '_blank')" title="Listen on Apple Music">
-          <td><span class="rank-badge rank-${escapeHtml(rank)}">${escapeHtml(rank)}</span></td>
-          <td>
-            <img src="${imgSrc}" 
-                 onerror="this.onerror=null;this.src='${fallbackImg}';" 
-                 alt="Track Cover" 
-                 class="track-cover" 
-                 loading="lazy" />
-          </td>
-          <td class="track-title-cell">
-            <a href="${itunesUrl}" target="_blank" rel="noopener noreferrer" class="track-link" onclick="event.stopPropagation()">
-              ${escapeHtml(col4)}
+        <!-- Hover Action Overlay -->
+        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
+          <div class="flex justify-end">
+            <a href="${track.trackViewUrl}" target="_blank" title="View on iTunes" class="p-2 bg-black/60 hover:bg-brand hover:text-black rounded-full text-white transition">
+              <i class="fa-brands fa-apple text-sm"></i>
             </a>
-          </td>
-          <td class="track-artist">${escapeHtml(col3)}</td>
-        </tr>
-      `;
-    }
+          </div>
+
+          <!-- Play Preview Button -->
+          <div class="flex justify-center">
+            <button 
+              data-preview="${track.previewUrl}" 
+              class="play-btn p-3 bg-brand text-black rounded-full shadow-lg hover:scale-110 transition transform">
+              <i class="fa-solid fa-play text-lg translate-x-0.5"></i>
+            </button>
+          </div>
+
+          <div class="text-right">
+            <span class="text-[10px] bg-black/70 px-2 py-1 rounded text-gray-300 font-medium">
+              ${track.primaryGenreName || 'Habesha'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Details -->
+      <div class="p-3">
+        <h3 class="text-sm font-semibold truncate text-gray-100 group-hover:text-brand transition-colors" title="${track.trackName}">
+          ${track.trackName}
+        </h3>
+        <p class="text-xs text-gray-400 mt-0.5 truncate">${track.artistName}</p>
+        <p class="text-[11px] text-gray-500 mt-1 flex items-center justify-between">
+          <span>${releaseYear}</span>
+          <span class="text-brand font-medium">${track.trackPrice > 0 ? '$' + track.trackPrice : 'iTunes'}</span>
+        </p>
+      </div>
+    `;
+
+    musicGrid.appendChild(card);
   });
 
-  tableHtml += `</tbody></table></div>`;
-  return tableHtml;
+  attachPlayListeners();
 }
 
-function initBackToTop() {
-  const backToTopBtn = document.getElementById("back-to-top");
-  if (!backToTopBtn) return;
+// Attach Event Listeners to Audio Play Buttons
+function attachPlayListeners() {
+  document.querySelectorAll('.play-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const previewUrl = btn.getAttribute('data-preview');
+      const icon = btn.querySelector('i');
 
-  window.addEventListener("scroll", () => {
-    if (window.scrollY > 300) {
-      backToTopBtn.classList.add("show");
-    } else {
-      backToTopBtn.classList.remove("show");
-    }
+      if (audioPlayer.src === previewUrl && !audioPlayer.paused) {
+        audioPlayer.pause();
+        icon.className = 'fa-solid fa-play text-lg translate-x-0.5';
+      } else {
+        if (currentlyPlayingBtn) {
+          currentlyPlayingBtn.querySelector('i').className = 'fa-solid fa-play text-lg translate-x-0.5';
+        }
+        audioPlayer.src = previewUrl;
+        audioPlayer.play();
+        icon.className = 'fa-solid fa-pause text-lg';
+        currentlyPlayingBtn = btn;
+      }
+    });
   });
+}
 
-  backToTopBtn.addEventListener("click", () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+// Search Form Handler
+document.getElementById('search-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const query = document.getElementById('search-input').value.trim();
+  if (query) {
+    currentQuery = query;
+    sectionTitle.querySelector('span').textContent = `Search: "${query}"`;
+    fetchHabeshaMusic(currentQuery, currentLimit);
+  }
+});
+
+// Category Filter Buttons Handler
+document.querySelectorAll('.pill-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pill-btn').forEach(b => {
+      b.className = "pill-btn px-3 py-1.5 rounded-full text-gray-400 hover:text-white transition";
+      b.classList.remove('active');
+    });
+    btn.className = "pill-btn active px-3 py-1.5 rounded-full bg-brand text-black font-semibold shadow-sm transition";
+
+    currentQuery = btn.getAttribute('data-query');
+    sectionTitle.querySelector('span').textContent = btn.textContent;
+    fetchHabeshaMusic(currentQuery, currentLimit);
   });
-}
+});
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+// Limit Button Handler
+document.querySelectorAll('.limit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.limit-btn').forEach(b => {
+      b.className = "limit-btn px-3 py-1 text-gray-400 hover:text-white";
+      b.classList.remove('active');
+    });
+    btn.className = "limit-btn active px-3 py-1 bg-gray-800 text-white rounded-md";
+
+    currentLimit = parseInt(btn.getAttribute('data-limit'));
+    fetchHabeshaMusic(currentQuery, currentLimit);
+  });
+});
+
+// Reset play icon when audio finishes playing
+audioPlayer.addEventListener('ended', () => {
+  if (currentlyPlayingBtn) {
+    currentlyPlayingBtn.querySelector('i').className = 'fa-solid fa-play text-lg translate-x-0.5';
+  }
+});
+
+// Initial Fetch on Page Load
+document.addEventListener('DOMContentLoaded', () => {
+  fetchHabeshaMusic(currentQuery, currentLimit);
+});
